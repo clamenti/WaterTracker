@@ -1,0 +1,23 @@
+# Node modules
+node_modules/
+
+# Environment variables
+.env
+
+# Logs
+*.log
+
+# SQLite database
+*.sqlite
+*.sqlite3
+
+# Editor folders
+.idea/
+.vscode/
+
+# JetBrains HTTP requests
+httpRequests/
+
+# System files
+.DS_Store
+Thumbs.db
