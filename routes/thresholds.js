@@ -19,4 +19,20 @@ router.get('/', auth, async (req, res) => {
   res.json(thresholds);
 });
 
+router.delete('/delete/:id', auth, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const threshold = await Threshold.findByPk(id);
+
+    if (!threshold) {
+      return res.status(404).json({ error: 'Threshold not found' });
+    }
+
+    await threshold.destroy();
+    res.json({ message: 'Threshold deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete threshold' });
+  }
+});
+
 module.exports = router;
