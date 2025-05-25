@@ -1,7 +1,7 @@
-
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useNavigate } from "react-router-dom";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 function LoginPage({ setToken }) {
     const [email, setEmail] = useState("");
@@ -80,7 +80,7 @@ function DrinkPage({ token }) {
         });
         const today = new Date().toISOString().split("T")[0];
         const total = res.data
-            .filter(log => log.date === today)
+            .filter(log => new Date(log.date).toISOString().split("T")[0] === today)
             .reduce((sum, log) => sum + log.quantity, 0);
         setTotalToday(total);
     };
@@ -142,26 +142,56 @@ function DrinkPage({ token }) {
 }
 
 function LogsPage({ token }) {
-    const [logs, setLogs] = useState([]);
+    const [data, setData] = useState([]);
 
     useEffect(() => {
         axios.get("http://localhost:3000/api/consumptions", {
             headers: { Authorization: `Bearer ${token}` }
-        }).then(res => setLogs(res.data));
+        }).then(res => {
+            const today = new Date();
+            const last30 = new Date();
+            last30.setDate(today.getDate() - 29);
+            const map = new Map();
+
+            for (let i = 0; i < 30; i++) {
+                const d = new Date(last30);
+                d.setDate(last30.getDate() + i);
+                const key = d.toISOString().split('T')[0];
+                map.set(key, 0);
+            }
+
+            res.data.forEach(log => {
+                const key = new Date(log.date).toISOString().split('T')[0];
+                if (map.has(key)) {
+                    map.set(key, map.get(key) + log.quantity / 1000);
+                }
+            });
+
+            const chartData = Array.from(map.entries()).map(([date, value]) => ({ date, value }));
+            setData(chartData);
+        });
     }, [token]);
 
     return (
-        <div style={{ padding: "2rem", maxWidth: "600px", margin: "0 auto", textAlign: "center" }}>
-            <h2>Drink Logs</h2>
-            <ul>
-                {logs.map(log => (
-                    <li key={log.id}>{log.date} — {(log.quantity / 1000).toFixed(2)} L</li>
-                ))}
-            </ul>
+        <div style={{ marginTop: '6rem', textAlign: 'center' }}>
+            <h2>Drink Logs (Last 30 Days)</h2>
+            {data.length === 0 ? (
+                <p>No data available.</p>
+            ) : (
+                <ResponsiveContainer width="95%" height={300}>
+                    <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" />
+                        <YAxis label={{ value: 'Liters', angle: -90, position: 'insideLeft' }} />
+                        <Tooltip />
+                        <Legend />
+                        <Line type="monotone" dataKey="value" stroke="#007BFF" activeDot={{ r: 8 }} />
+                    </LineChart>
+                </ResponsiveContainer>
+            )}
         </div>
     );
 }
-
 function ThresholdPage({ token }) {
     const [thresholds, setThresholds] = useState([]);
     const [limit, setLimit] = useState("");
